@@ -1,0 +1,145 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title>Mario the game</title>
+	<script type="text/javascript" src="jquery.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="640" height="480">
+		<p>Your browser does not support the canvas element.</p>
+	</canvas>
+	<script type="text/javascript" src="enjine.js"></script>
+	<script type="text/javascript" src="code/setup.js"></script>
+	<script type="text/javascript" src="code/level.js"></script>
+	<script type="text/javascript" src="code/loadingState.js"></script>
+	<script type="text/javascript" src="code/backgroundGenerator.js"></script>
+	<script type="text/javascript" src="code/backgroundRender.js"></script>
+	<script type="text/javascript" src="code/levelGenerator.js"></script>
+	<script type="text/javascript" src="code/levelRender.js"></script>
+	<script type="text/javascript" src="code/sparkle.js"></script>
+	<script type="text/javascript" src="code/character.js"></script>
+	<script>
+		Game.LoadingState.prototype.CheckForChange = function(context) {
+			if (this.ImagesLoaded) {
+			    context.ChangeState(new Game.stateTest());
+			}
+		};
+
+		Game.stateTest = function(){
+			this.drawManager = null;
+			this.camera = null;
+			this.mario = null;
+			this.font = null;
+			this.wasKeyDown = false;
+
+			this.Level = null;
+			this.Layer = null;
+    		this.BgLayer = [];
+    		this.Paused = false;
+		};
+		//gs={_proto_={enter,exit,...}}
+		Game.stateTest.prototype = new Enjine.GameState();
+		//gs={enter,...,_proto_={}}
+		Game.stateTest.prototype.Enter = function(){
+
+			var levelGenerator = new Game.LevelGenerator(320, 15);
+			this.Level = levelGenerator.CreateLevel(0, 1);//type, difficulty
+			this.Layer = new Game.LevelRender(this.Level, 320, 240);
+		
+			this.drawManager = new Enjine.DrawableManager();
+			this.camera = new Enjine.Camera();
+			
+			for(i = 0; i < 2; i++){
+				scrollSpeed = 4 >> i;
+		        w = ((((320 * 16) - 320) / scrollSpeed) | 0) + 320;
+		        h = ((((240 * 16) - 240) / scrollSpeed) | 0) + 240;
+				bgLevelGenerator = new Game.BackgoundGenerator(w / 32 + 1, h / 32 + 1, i === 0, Game.LevelType.Castle);
+				this.BgLayer[i] = new Game.BackgroundRender(bgLevelGenerator.CreateLevel(), 320, 240, scrollSpeed);
+			}
+
+			this.mario = new Game.Character(this);
+			this.mario.SetLarge(true, false);
+			
+			this.drawManager.Add(this.mario);
+		};
+
+		Game.stateTest.prototype.AddSprite = function(sp){
+			this.drawManager.Add(sp);
+		};
+
+		Game.stateTest.prototype.RemoveSprite = function(sp){
+			this.drawManager.Remove(sp);
+		};
+		
+		Game.stateTest.prototype.Exit = function(){
+			this.drawManager.Clear();
+			delete this.drawManager;
+			delete this.camera;
+			delete this.mario;
+
+			delete this.Level;
+			delete this.Layer;
+		};
+		
+		Game.stateTest.prototype.Update = function(delta){
+			this.camera.X = this.mario.X - 160;
+		    if (this.camera.X < 0) {
+		        this.camera.X = 0;
+		    }
+		    if (this.camera.X > this.Level.Width * 16 - 320) {
+		        this.camera.X = this.Level.Width * 16 - 320;
+		    }
+
+			this.Layer.Update(delta);
+			this.Level.Update();
+
+			this.camera.X = (this.mario.XOld + (this.mario.X - this.mario.XOld) * delta) - 160;
+			this.camera.Y = (this.mario.YOld + (this.mario.Y - this.mario.YOld) * delta) - 120;
+
+			for (i = 0; i < this.drawManager.Objects.length; i++) {
+	            this.drawManager.Objects[i].Update(delta);
+	        }
+
+			if(Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.Right) || 
+				Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.Left)){
+				//this.mario.Update(delta);//sprite.update(t)
+				this.wasKeyDown = true;
+			}
+				
+		};
+		
+		Game.stateTest.prototype.Draw = function(context){
+			if (this.camera.X < 0) {
+		        this.camera.X = 0;
+		    }
+		    if (this.camera.Y < 0) {
+		        this.camera.Y = 0;
+		    }
+		    if (this.camera.X > this.Level.Width * 16 - 320) {
+		        this.camera.X = this.Level.Width * 16 - 320;
+		    }
+		    if (this.camera.Y > this.Level.Height * 16 - 240) {
+		        this.camera.Y = this.Level.Height * 16 - 240;
+		    }
+
+			for (i = 0; i < 2; i++) {
+			    this.BgLayer[i].Draw(context, this.camera);
+			}
+			this.Layer.Draw(context, this.camera);
+
+			context.save();
+    		context.translate(-this.camera.X, -this.camera.Y);
+			this.drawManager.Draw(context, this.camera);//sprite.draw(a,b), b as origin
+			context.restore();
+		};
+		
+		Game.stateTest.prototype.CheckForChange = function(context){
+			if(this.wasKeyDown && !Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.F))
+				return;//context.ChangeState(new Game.LoadingState());
+		};
+		//GameState::enter,exit,update,draw,checkforchange
+		$(document).ready(function() { new Enjine.Application().Initialize(new Game.LoadingState(), 320, 240) });//w,h
+	</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title>Mario the game</title>
+	<script type="text/javascript" src="jquery.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="640" height="480">
+		<p>Your browser does not support the canvas element.</p>
+	</canvas>
+	<script type="text/javascript" src="enjine.js"></script>
+	<script type="text/javascript" src="code/setup.js"></script>
+	<script type="text/javascript" src="code/level.js"></script>
+	<script type="text/javascript" src="code/loadingState.js"></script>
+	<script type="text/javascript" src="code/backgroundGenerator.js"></script>
+	<script type="text/javascript" src="code/backgroundRender.js"></script>
+	<script type="text/javascript" src="level1.json"></script>
+	<script type="text/javascript" src="code/levelLoading.js"></script>
+	<script type="text/javascript" src="code/levelRender.js"></script>
+	<script type="text/javascript" src="code/gift.js"></script>
+	<script type="text/javascript" src="code/sparkle.js"></script>
+	<script type="text/javascript" src="code/character.js"></script>
+	<script type="text/javascript" src="code/coinAnim.js"></script>
+	<script type="text/javascript" src="code/fireball.js"></script>
+	<script type="text/javascript" src="code/gameState.js"></script>
+	<script>
+		//GameState::enter,exit,update,draw,checkforchange
+		$(document).ready(function() { new Enjine.Application().Initialize(new Game.LoadingState(), 320, 240) });//w,h
+	</script>
+</body>
+</html>

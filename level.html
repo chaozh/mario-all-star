@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title>Mario the game</title>
+	<script type="text/javascript" src="jquery.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="640" height="480">
+		<p>Your browser does not support the canvas element.</p>
+	</canvas>
+	<script type="text/javascript" src="enjine.js"></script>
+	<script type="text/javascript" src="code/setup.js"></script>
+	<script type="text/javascript" src="code/level.js"></script>
+	<script type="text/javascript" src="code/backgroundGenerator.js"></script>
+	<script type="text/javascript" src="code/backgroundRender.js"></script>
+	<script type="text/javascript" src="code/levelGenerator.js"></script>
+	<script type="text/javascript" src="code/levelRender.js"></script>
+	<script>
+		Game.LevelTest = function(){
+			this.drawManager = null;
+			this.camera = null;
+			this.flip = null;
+			this.font = null;
+			this.wasKeyDown = false;
+
+			this.Layer = null;
+    		this.BgLayer = [];
+
+    		this.Level = null;
+		};
+		//gs={_proto_={enter,exit,...}}
+		Game.LevelTest.prototype = new Enjine.GameState();
+		//gs={enter,...,_proto_={}}
+		Game.LevelTest.prototype.Enter = function(){
+
+			Enjine.Resources.AddImage("flip","images/gameovergost.gif", 864, 64);
+			Enjine.Resources.AddImage("background","images/bgsheet.png",256, 320);
+			Enjine.Resources.AddImage("map","images/mapsheet.png",256, 256);
+			Game.Tile.LoadBehaviors();
+
+			var levelGenerator = new Game.LevelGenerator(320, 15);
+			this.Level = levelGenerator.CreateLevel(0, 1);//type, difficulty
+			this.Layer = new Game.LevelRender(this.Level, 320, 240);
+		
+			this.drawManager = new Enjine.DrawableManager();
+			this.camera = new Enjine.Camera();
+			
+			for(i = 0; i < 2; i++){
+				scrollSpeed = 4 >> i;
+		        w = ((((320 * 16) - 320) / scrollSpeed) | 0) + 320;
+		        h = ((((240 * 16) - 240) / scrollSpeed) | 0) + 240;
+				bgLevelGenerator = new Game.BackgoundGenerator(w / 32 + 1, h / 32 + 1, i === 0, Game.LevelType.Castle);
+				this.BgLayer[i] = new Game.BackgroundRender(bgLevelGenerator.CreateLevel(), 320, 240, scrollSpeed);
+			}
+
+			this.flip = new Enjine.AnimatedSprite();
+			this.flip.Image = Enjine.Resources.Images["flip"];
+			this.flip.SetColumnCount(9);
+			this.flip.SetRowCount(1);
+			this.flip.AddNewSequence("loop", 0, 0, 0, 8);
+			this.flip.PlaySequence("loop", true);
+			this.flip.FramesPerSecond = 1/15;
+			
+			this.drawManager.Add(this.flip);
+		};
+		
+		Game.LevelTest.prototype.Exit = function(){
+			this.drawManager.Clear();
+			delete this.drawManager;
+			delete this.camera;
+			delete this.flip;
+
+			delete this.Level;
+			delete this.Layer;
+		};
+		
+		Game.LevelTest.prototype.Update = function(delta){
+			this.camera.X = 5;
+		    if (this.camera.X < 0) {
+		        this.camera.X = 0;
+		    }
+		    if (this.camera.X > this.Level.Width * 16 - 320) {
+		        this.camera.X = this.Level.Width * 16 - 320;
+		    }
+
+		    this.drawManager.Update(delta);//sprite.update(t)
+
+			this.Layer.Update(delta);
+			this.Level.Update();
+
+			if(Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.S))
+				this.wasKeyDown = true;
+		};
+		
+		Game.LevelTest.prototype.Draw = function(context){
+			for (i = 0; i < 2; i++) {
+			    this.BgLayer[i].Draw(context, this.camera);
+			}
+			this.Layer.Draw(context, this.camera);
+			this.drawManager.Draw(context, this.camera);//sprite.draw(a,b), b as origin
+		};
+		
+		Game.LevelTest.prototype.CheckForChange = function(context){
+			if(this.wasKeyDown && !Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.S))
+				return;//context.ChangeState(new Game.TitleState());//gameState
+		};
+		//GameState::enter,exit,update,draw,checkforchange
+		$(document).ready(function() { new Enjine.Application().Initialize(new Game.LevelTest(), 320, 240) });//w,h
+	</script>
+</body>
+</html>

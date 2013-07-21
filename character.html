@@ -1,0 +1,171 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title>Mario the game</title>
+	<script type="text/javascript" src="jquery.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="640" height="480">
+		<p>Your browser does not support the canvas element.</p>
+	</canvas>
+	<script type="text/javascript" src="enjine.js"></script>
+	<script type="text/javascript" src="code/setup.js"></script>
+	<script type="text/javascript" src="code/level.js"></script>
+	<script type="text/javascript" src="code/backgroundGenerator.js"></script>
+	<script type="text/javascript" src="code/backgroundRender.js"></script>
+	<script type="text/javascript" src="code/levelGenerator.js"></script>
+	<script type="text/javascript" src="code/levelRender.js"></script>
+	<script type="text/javascript" src="code/character.js"></script>
+	<script>
+		Game.CharacterTest = function(){
+			this.drawManager = null;
+			this.camera = null;
+			this.mario = null;
+			this.font = null;
+			this.wasKeyDown = false;
+
+			this.Level = null;
+			this.Layer = null;
+    		this.BgLayer = [];
+    		this.Paused = false;
+		};
+		//gs={_proto_={enter,exit,...}}
+		Game.CharacterTest.prototype = new Enjine.GameState();
+		//gs={enter,...,_proto_={}}
+		Game.CharacterTest.prototype.Enter = function(){
+
+			var testAudio = new Audio();
+	
+			if (testAudio.canPlayType("audio/mp3")) {
+				Enjine.Resources.AddSound("1up", "sounds/1-up.mp3", 1)
+				    .AddSound("breakblock", "sounds/breakblock.mp3")
+				    .AddSound("bump", "sounds/bump.mp3", 4)
+				    .AddSound("cannon", "sounds/cannon.mp3")
+				    .AddSound("coin", "sounds/coin.mp3", 5)
+				    .AddSound("death", "sounds/death.mp3", 1)
+				    .AddSound("exit", "sounds/exit.mp3", 1)
+				    .AddSound("fireball", "sounds/fireball.mp3", 1)
+				    .AddSound("jump", "sounds/jump.mp3")
+				    .AddSound("kick", "sounds/kick.mp3")
+				    .AddSound("pipe", "sounds/pipe.mp3", 1)
+				    .AddSound("powerdown", "sounds/powerdown.mp3", 1)
+				    .AddSound("powerup", "sounds/powerup.mp3", 1)
+				    .AddSound("sprout", "sounds/sprout.mp3", 1)
+				    .AddSound("stagestart", "sounds/stagestart.mp3", 1)
+				    .AddSound("stomp", "sounds/stomp.mp3", 2);
+			} else {
+			    Enjine.Resources.AddSound("1up", "sounds/1-up.wav", 1)
+				    .AddSound("breakblock", "sounds/breakblock.wav")
+				    .AddSound("bump", "sounds/bump.wav", 2)
+				    .AddSound("cannon", "sounds/cannon.wav")
+				    .AddSound("coin", "sounds/coin.wav", 5)
+				    .AddSound("death", "sounds/death.wav", 1)
+				    .AddSound("exit", "sounds/exit.wav", 1)
+				    .AddSound("fireball", "sounds/fireball.wav", 1)
+				    .AddSound("jump", "sounds/jump.wav", 1)
+				    .AddSound("kick", "sounds/kick.wav", 1)
+				    .AddSound("message", "sounds/message.wav", 1)
+				    .AddSound("pipe", "sounds/pipe.wav", 1)
+				    .AddSound("powerdown", "sounds/powerdown.wav", 1)
+				    .AddSound("powerup", "sounds/powerup.wav", 1)
+				    .AddSound("sprout", "sounds/sprout.wav", 1)
+				    .AddSound("stagestart", "sounds/stagestart.wav", 1)
+				    .AddSound("stomp", "sounds/stomp.wav", 1);
+			}
+
+			Enjine.Resources.AddImage("smallMario","images/smallmariosheet.png");
+			Enjine.Resources.AddImage("mario","images/mariosheet.png");
+			Enjine.Resources.AddImage("fireMario","images/firemariosheet.png");
+			Enjine.Resources.AddImage("background","images/bgsheet.png");
+			Enjine.Resources.AddImage("map","images/mapsheet.png");
+			Game.Tile.LoadBehaviors();
+
+			var levelGenerator = new Game.LevelGenerator(320, 15);
+			this.Level = levelGenerator.CreateLevel(0, 1);//type, difficulty
+			this.Layer = new Game.LevelRender(this.Level, 320, 240);
+		
+			this.drawManager = new Enjine.DrawableManager();
+			this.camera = new Enjine.Camera();
+			
+			for(i = 0; i < 2; i++){
+				scrollSpeed = 4 >> i;
+		        w = ((((320 * 16) - 320) / scrollSpeed) | 0) + 320;
+		        h = ((((240 * 16) - 240) / scrollSpeed) | 0) + 240;
+				bgLevelGenerator = new Game.BackgoundGenerator(w / 32 + 1, h / 32 + 1, i === 0, Game.LevelType.Castle);
+				this.BgLayer[i] = new Game.BackgroundRender(bgLevelGenerator.CreateLevel(), 320, 240, scrollSpeed);
+			}
+
+			this.mario = new Game.Character(this);
+			this.mario.SetLarge(false, false);
+			
+			this.drawManager.Add(this.mario);
+		};
+		
+		Game.CharacterTest.prototype.Exit = function(){
+			this.drawManager.Clear();
+			delete this.drawManager;
+			delete this.camera;
+			delete this.mario;
+
+			delete this.Level;
+			delete this.Layer;
+		};
+		
+		Game.CharacterTest.prototype.Update = function(delta){
+			this.camera.X = this.mario.X - 160;
+		    if (this.camera.X < 0) {
+		        this.camera.X = 0;
+		    }
+		    if (this.camera.X > this.Level.Width * 16 - 320) {
+		        this.camera.X = this.Level.Width * 16 - 320;
+		    }
+
+			this.Layer.Update(delta);
+			this.Level.Update();
+
+			this.camera.X = (this.mario.XOld + (this.mario.X - this.mario.XOld) * delta) - 160;
+			this.camera.Y = (this.mario.YOld + (this.mario.Y - this.mario.YOld) * delta) - 120;
+
+			if(Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.Right) || 
+				Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.Left)){
+				this.mario.Update(delta);//sprite.update(t)
+				this.wasKeyDown = true;
+			}
+				
+		};
+		
+		Game.CharacterTest.prototype.Draw = function(context){
+			if (this.camera.X < 0) {
+		        this.camera.X = 0;
+		    }
+		    if (this.camera.Y < 0) {
+		        this.camera.Y = 0;
+		    }
+		    if (this.camera.X > this.Level.Width * 16 - 320) {
+		        this.camera.X = this.Level.Width * 16 - 320;
+		    }
+		    if (this.camera.Y > this.Level.Height * 16 - 240) {
+		        this.camera.Y = this.Level.Height * 16 - 240;
+		    }
+
+			for (i = 0; i < 2; i++) {
+			    this.BgLayer[i].Draw(context, this.camera);
+			}
+			this.Layer.Draw(context, this.camera);
+
+			//context.save();
+    		//context.translate(-this.camera.X, -this.camera.Y);
+			this.drawManager.Draw(context, this.camera);//sprite.draw(a,b), b as origin
+			//context.restore();
+		};
+		
+		Game.CharacterTest.prototype.CheckForChange = function(context){
+			if(this.wasKeyDown && !Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.F))
+				return;//context.ChangeState(new Game.TitleState());//gameState
+		};
+		//GameState::enter,exit,update,draw,checkforchange
+		$(document).ready(function() { new Enjine.Application().Initialize(new Game.CharacterTest(), 320, 240) });//w,h
+	</script>
+</body>
+</html>

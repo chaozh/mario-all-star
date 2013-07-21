@@ -1,0 +1,85 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title>Mario the game</title>
+	<script type="text/javascript" src="jquery.js"></script>
+</head>
+<body>
+	<img src="images/gameovergost.gif"/>
+	<canvas id="canvas" width="640" height="480">
+		<p>Your browser does not support the canvas element.</p>
+	</canvas>
+	<script type="text/javascript" src="enjine.js"></script>
+	<script>
+		var Mario = {};
+		//Mario.FlipTest={_proto_=gs}
+		Mario.FlipTest = function(){
+			this.drawManager = null;
+			this.camera = null;
+			this.flip = null;
+			this.font = null;
+			this.wasKeyDown = false;
+		};
+		//gs={_proto_={enter,exit,...}}
+		Mario.FlipTest.prototype = new Enjine.GameState();
+		//gs={enter,...,_proto_={}}
+		Mario.FlipTest.prototype.Enter = function(){
+
+			Enjine.Resources.AddImage("flip","images/gameovergost.gif", 864, 64);
+			Enjine.Resources.AddImage("font", "images/font.gif");
+		
+			this.drawManager = new Enjine.DrawableManager();
+			this.camera = new Enjine.Camera();
+			
+			this.flip = new Enjine.AnimatedSprite();
+			this.flip.Image = Enjine.Resources.Images["flip"];//sprite.image
+			this.flip.SetColumnCount(9);//animatedSprite, opposite to SetFrameWidth
+			this.flip.SetRowCount(1);
+			this.flip.AddNewSequence("turnLoop", 0, 0, 0, 8);//id,animateSequence(startr,c,endr,c)
+			this.flip.PlaySequence("turnLoop", true);//id,loop
+			this.flip.FramesPerSecond = 1/9;
+			this.flip.X = 10;//for sprite.draw
+			this.flip.Y = 68;
+			
+			this.font = new Enjine.SpriteFont([], Enjine.Resources.Images["font"], 8, 8, (function(y) {
+				var letters = [];
+				var i = 0;
+				for (i = 32; i < 127; i++) {
+					letters[i] = { X: (i - 32) * 8, Y: y };
+				}
+				return letters;
+			})(0));
+			this.font.Strings[0] = { String:"Flip Test", X: 100, Y: 160 };
+			
+			this.drawManager.Add(this.font);
+			this.drawManager.Add(this.flip);
+		};
+		
+		Mario.FlipTest.prototype.Exit = function(){
+			this.drawManager.Clear();
+			delete this.drawManager;
+			delete this.camera;
+			delete this.flip;
+			delete this.font;
+		};
+		
+		Mario.FlipTest.prototype.Update = function(delta){
+			this.drawManager.Update(delta);//sprite.update(t)
+			if(Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.S))
+				this.wasKeyDown = true;
+		};
+		
+		Mario.FlipTest.prototype.Draw = function(context){
+			this.drawManager.Draw(context, this.camera);//sprite.draw(a,b), b as origin
+		};
+		
+		Mario.FlipTest.prototype.CheckForChange = function(context){
+			if(this.wasKeyDown && !Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.S))
+				return;//context.ChangeState(new Mario.TitleState());//gameState
+		};
+		//GameState::enter,exit,update,draw,checkforchange
+		$(document).ready(function() { new Enjine.Application().Initialize(new Mario.FlipTest(), 320, 240) });//w,h
+	</script>
+</body>
+</html>
