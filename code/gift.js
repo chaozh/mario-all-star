@@ -46,7 +46,7 @@ Game.Gift.prototype.Move = function(){
 		this.Xv = this.Facing * sideWaySpeed;
 
 		this.XFlip = this.Facing === -1;
-		this.RunTime += Math.abs(this.Xv) + 5;//????
+		this.RunTime += Math.abs(this.Xv) + 5;// for cacu frame
 
 		if (!this.SubMove(this.Xv,0)) {
 			this.Facing = -this.Facing;

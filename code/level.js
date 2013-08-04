@@ -178,20 +178,17 @@ Game.Level = function(width, height) {
 
 	this.Map = [];
 	this.Data = [];
-    this.Bdata = [];
 	this.SpriteTemplates = [];
 
 	var x = 0, y = 0;
 	for (x = 0; x < this.Width; x++) {
 		this.Map[x] = [];
 		this.Data[x] = [];
-        this.Bdata[x] = [];
 		this.SpriteTemplates[x] = [];
 
 		for (y = 0; y < this.Height; y++) {
 			this.Map[x][y] = 0;
 			this.Data[x][y] = 0;
-            this.Bdata[x][y] = null;
 			this.SpriteTemplates[x][y] = null;
 		}
 	}
@@ -248,22 +245,6 @@ Game.Level.prototype = {
         if (y >= this.Height) { return null; }
         return this.Data[x][y];
     },
-    //for specail gift
-    SetBdata: function(x, y, data) {
-        if (x < 0) { return; }
-        if (y < 0) { return; }
-        if (x >= this.Width) { return; }
-        if (y >= this.Height) { return; }
-        this.Bdata[x][y] = data;
-    },
-
-    GetBdata: function(x, y){
-        if (x < 0) { return null; }
-        if (y < 0) { return null; }
-        if (x >= this.Width) { return null; }
-        if (y >= this.Height) { return null; }
-        return this.Bdata[x][y];
-    },
 
     IsBlocking: function(x, y, xa, ya){
 		var block = this.GetBlock(x, y);
@@ -273,7 +254,7 @@ Game.Level.prototype = {
 
 		return blocking;
 	},
-
+    //for specail gift and enemy
     GetSpriteTemplate: function(x, y) {
         if (x < 0) { return null; }
         if (y < 0) { return null; }

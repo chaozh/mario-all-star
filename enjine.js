@@ -47,7 +47,7 @@ Enjine.Keys = {
 	W : 87,
 	X : 88,
 	Y : 89,
-	Z : 80,
+	Z : 90,
 	Left : 37,
 	Up : 38,
 	Right : 39,
@@ -203,7 +203,7 @@ Enjine.GameState.prototype = {
 Enjine.GameTimer = function () {
 	this.FramesPerSecond = 1E3 / 30;
 	this.LastTime = 0;
-	this.UpdateObject = this.IntervalFunc = null
+	this.UpdateObject = this.IntervalFunc = null;
 };
 Enjine.GameTimer.prototype = {
 	Start : function () {
@@ -274,13 +274,18 @@ Enjine.DrawableManager.prototype = {
 		for (var b = 0; b < this.Objects.length; b++)
 			this.Objects[b].Update && this.Objects[b].Update(a)
 	},
-	Draw : function (a, b, z) {
+	DrawAll : function (a, b) {
 		if (this.Unsorted)
 			this.Unsorted = !1, this.Objects.sort(function (a, b) {
 				return a.ZOrder - b.ZOrder
 			});
 		for (var c = 0; c < this.Objects.length; c++){
-			this.Objects[c].ZOrder == z && this.Objects[c].Draw && this.Objects[c].Draw(a, b)
+			this.Objects[c].Draw && this.Objects[c].Draw(a, b)
+		}
+	},
+	DrawLayer : function (a, b, z) {
+		for (var c = 0; c < this.Objects.length; c++){
+			this.Objects[c].ZOrder === z && this.Objects[c].Draw && this.Objects[c].Draw(a, b)
 		}
 	}
 };
@@ -473,11 +478,12 @@ Enjine.CharacterSprite.prototype.Move = function(){
 };
 Enjine.MovingCharacterSprite = function(){
 	//used in submove
+	this.AvoidCliffs = false;
 	this.JumpTime = 0;
 	this.Sliding = false;
 	this.OnGround = false;
 	this.Facing = 0;
-	//this.Layer = 1; replaced by zOrder
+	this.ZOrder = 1;
 
 	this.Width = 0; this.Height = 0;
 
@@ -556,6 +562,10 @@ Enjine.MovingCharacterSprite.prototype.SubMove = function(xv, yv) {
         } else {
             this.Sliding = false;
         }
+         //for auto
+         if (this.AvoidCliffs && this.OnGround && !this.World.Level.IsBlocking(((this.X + this.Xv + this.Width) / 16) | 0, ((this.Y / 16) + 1) | 0, this.Xv, 1)) {
+            collide = true;
+        }
     }
     if (xv < 0) {
         this.Sliding = true;
@@ -575,6 +585,10 @@ Enjine.MovingCharacterSprite.prototype.SubMove = function(xv, yv) {
             collide = true;
         } else {
             this.Sliding = false;
+        }
+        //for auto
+        if (this.AvoidCliffs && this.OnGround && !this.World.Level.IsBlocking(((this.X + this.Xv - this.Width) / 16) | 0, ((this.Y / 16) + 1) | 0, this.Xv, 1)) {
+            collide = true;
         }
     }
 
@@ -608,6 +622,10 @@ Enjine.MovingCharacterSprite.prototype.SubMove = function(xv, yv) {
 Enjine.MovingCharacterSprite.prototype.IsBlocking = function(x, y, xv, yv){
 	x = (x / 16) | 0;
     y = (y / 16) | 0;
+
+    if (x === ((this.X / 16) | 0) && y === ((this.Y / 16) | 0)) {
+        return false;
+    }
 
     return this.World.Level.IsBlocking(x, y, xv, yv);
 };

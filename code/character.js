@@ -26,12 +26,13 @@ Game.Character = function(world) {
     this.MayJump = false;
     this.Ducking = false;
     //this.Sliding = false;
-    //this.JumpTime = 0;
     this.XJumpSpeed = 0;
-    this.YJumpSpeed = 0;
+    this.YJumpSpeed = -1.1;
+    this.JumpTime = 0;
     this.CanShoot = false;
     this.Facing = 0; //1 for pos -1 for nag
     this.PowerUpTime = 0;
+    this.sideWaysSpeed = 0.8;
 
     //Level scene
     this.World = world;
@@ -101,8 +102,10 @@ Game.Character.prototype.GetCoin = function(){
 Game.Character.prototype.GetGift = function(type){
     switch(type){
         case Game.GiftType.RedMushroom:
-        case Game.GiftType.GreenMushroom:
             this.GetMushroom();
+            break;
+        case Game.GiftType.GreenMushroom:
+            this.Get1Up();
             break;
         case Game.GiftType.Flower:
             this.GetFlower();
@@ -203,7 +206,7 @@ Game.Character.prototype.Bump = function(x, y, isLarge){
     var block = this.World.Level.GetBlock(x, y), xx = 0, yy = 0;
     //check if a bumpable brick like question brick or some common brick
     if ((Game.Tile.Behaviors[block & 0xff] & Game.Tile.Bumpable) > 0) {
-        var data = this.World.Level.GetBdata(x, y);
+        var data = this.World.Level.GetSpriteTemplate(x, y);
         this.World.Level.SetBlockData(x, y, 4);//animation
         if (data && data.name === "block"){
             switch (data.special){
@@ -237,22 +240,6 @@ Game.Character.prototype.Bump = function(x, y, isLarge){
             this.World.AddSprite(new Game.CoinAnim(this.World, x, y));
         }
          this.World.BumpInto(x, y - 1);
-        /*
-        this.World.Level.SetBlock(x, y, 4);
-        //check if special
-        if ((Game.Tile.Behaviors[block & 0xff] & Game.Tile.Special) > 0){
-            Enjine.Resources.PlaySound("sprout");
-            if (!this.Large) {
-                this.World.AddSprite(new Game.Mushroom(this.World, x * 16 + 8, y * 16 + 8));
-            } else {
-                this.World.AddSprite(new Game.FireFlower(this.World, x * 16 + 8, y * 16 + 8));
-            }
-        } else {
-            this.GetCoin();
-            Enjine.Resources.PlaySound("coin");
-            this.World.AddSprite(new Game.CoinAnim(this.World, x, y));
-        }
-        */
     }
     //check if a breakable brick
     if ((Game.Tile.Behaviors[block & 0xff] & Game.Tile.Breakable) > 0) {
@@ -265,7 +252,7 @@ Game.Character.prototype.Bump = function(x, y, isLarge){
                 }
             }
         }else{
-             this.World.Level.SetBlockData(x, y, 4);//animation
+             this.World.Level.SetBlockData(x, y, 4);//bump animation
         }
         this.World.BumpInto(x, y - 1);
     }
@@ -310,12 +297,12 @@ Game.Character.prototype.Stomp = function(object) {
     targetY = object.Y - object.Height / 2;
     this.SubMove(0, targetY - this.Y);
 
-    if (object instanceof Game.Enemy || object instanceof Game.BulletBill) {
+    if (object instanceof Game.Enemy /*|| object instanceof Game.BulletBill*/) {
         Enjine.Resources.PlaySound("kick");
         this.XJumpSpeed = 0;
-        this.YJumpSpeed = -1.9;
-        this.JumpTime = 8;
-        this.yv = this.JumpTime * this.YJumpSpeed;
+        //this.YJumpSpeed = -1.9;
+        this.JumpTime = 14; //8
+        this.Yv = this.JumpTime * this.YJumpSpeed;
         this.OnGround = false;
         this.Sliding = false;
         this.InvulnerableTime = 1;
@@ -326,9 +313,9 @@ Game.Character.prototype.Stomp = function(object) {
         } else {
             Enjine.Resources.PlaySound("kick");
             this.XJumpSpeed = 0;
-            this.YJumpSpeed = -1.9;
-            this.JumpTime = 8;
-            this.yv = this.JumpTime * this.YJumpSpeed;
+            //this.YJumpSpeed = -1.9;
+            this.JumpTime = 11;
+            this.Yv = this.JumpTime * this.YJumpSpeed;
             this.OnGround = false;
             this.Sliding = false;
             this.InvulnerableTime = 1;
@@ -410,18 +397,18 @@ Game.Character.prototype.Jump = function() {
     } else if (this.OnGround && this.MayJump) {
         Enjine.Resources.PlaySound("jump");
         this.XJumpSpeed = 0;
-        this.YJumpSpeed = -1.9;
-        this.JumpTime = 7;
+        //this.YJumpSpeed = -1.9;
+        this.JumpTime = 10;
         this.Yv = this.JumpTime * this.YJumpSpeed;
         this.OnGround = false;
         this.Sliding = false;
     } else if (this.Sliding && this.MayJump) {
         Enjine.Resources.PlaySound("jump");
         this.XJumpSpeed = -this.Facing * 6;
-        this.YJumpSpeed = -2;
-        this.JumpTime = -6;
+        //this.YJumpSpeed = -2;
+        this.JumpTime = 9;
         this.Xv = this.XJumpSpeed;
-        this.Yv = -this.JumpTime * this.YJumpSpeed;
+        this.Yv = this.JumpTime * this.YJumpSpeed;
         this.OnGround = false;
         this.Sliding = false;
         this.Facing = -this.Facing;
@@ -484,7 +471,7 @@ Game.Character.prototype.Move = function() {
     this.Visible = (((this.InvulnerableTime / 2) | 0) & 1) === 0;
     this.WasOnGround = this.OnGround;
 
-    var sideWaysSpeed = Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.A) ? 1.2 : 0.6;
+    var sideWaysSpeed = Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.Z) ? this.sideWaysSpeed : this.sideWaysSpeed / 2; //x accelerate speed
     if (this.OnGround) {
         if (Enjine.KeyboardInput.IsKeyDown(Enjine.Keys.Down) && this.Large) {
             this.Ducking = true;
@@ -539,7 +526,7 @@ Game.Character.prototype.Move = function() {
     this.XFlip = (this.Facing === -1);
     this.RunTime += Math.abs(this.Xv) + 5;
 
-    if (Math.abs(this.Xv) < 0.5) {
+    if (Math.abs(this.Xv) < this.sideWaysSpeed / 2) {
         this.RunTime = 0;
         this.Xv = 0;
     }

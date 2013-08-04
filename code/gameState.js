@@ -17,7 +17,7 @@ Game.GameState = function(difficulty, type){
     this.Camera = null;
 
     this.MovingSpritesToCheck = [];
-    this.ShellsToCheck = [];
+    //this.ShellsToCheck = [];
     this.FireballsToCheck = [];
 
     this.FontShadow = null;
@@ -63,14 +63,33 @@ Game.GameState.prototype.Enter = function(){
 
 Game.GameState.prototype.AddSprite = function(sp){
     this.Sprites.Add(sp);
+    if(sp instanceof Game.Fireball){
+        this.FireballsToCheck.push(sp);
+        return;
+    }
+
+    if(sp instanceof Game.Shell){
+        this.FireballsToCheck.push(sp);
+    }
+
     if(sp instanceof Enjine.MovingCharacterSprite)
         this.MovingSpritesToCheck.push(sp);
+
 };
 
-Game.GameState.prototype.RemoveSprite = function(sp){
+Game.GameState.prototype.RemoveSprite = function(sp){ //optimize
     this.Sprites.Remove(sp);
+    if(sp instanceof Game.Fireball){
+        this.FireballsToCheck.splice(this.FireballsToCheck.indexOf(sp), 1);
+        return;
+    }
+
+    if(sp instanceof Game.Shell){
+       this.FireballsToCheck.splice(this.FireballsToCheck.indexOf(sp), 1);
+    }
+
     if(sp instanceof Enjine.MovingCharacterSprite)
-        this.MovingSpritesToCheck.pop(sp);
+        this.MovingSpritesToCheck.splice(this.MovingSpritesToCheck.indexOf(sp), 1);
 };
 
 Game.GameState.prototype.Exit = function(){
@@ -83,7 +102,7 @@ Game.GameState.prototype.Exit = function(){
     delete this.Layer;
 
     delete this.MovingSpritesToCheck;
-    delete this.ShellsToCheck;
+    //delete this.ShellsToCheck;
     delete this.FireballsToCheck;
 };
 
@@ -96,19 +115,62 @@ Game.GameState.prototype.Update = function(delta){
         this.Camera.X = this.Level.Width * 16 - 320;
     }
 
-    this.Layer.Update(delta);
-    this.Level.Update();
+    if (this.Paused) {
+        this.Character.Update(delta);
+    } else {
+        this.Layer.Update(delta);
+        this.Level.Update();
+
+        this.Tick++;
+        //add enemy
+        var x, y, dir, st = null;
+        for (x = ((this.Camera.X / 16) | 0) - 1; x <= (((this.Camera.X + this.Layer.Width) / 16) | 0) + 1; x++) {
+            for (y = ((this.Camera.Y / 16) | 0) - 1; y <= (((this.Camera.Y + this.Layer.Height) / 16) | 0) + 1; y++) {
+                dir = 0;
+
+                if (x * 16 + 8 > this.Character.X + 16) {
+                    dir = -1;
+                }
+                if (x * 16 + 8 < this.Character.X - 16) {
+                    dir = 1;
+                }
+
+                st = this.Level.GetSpriteTemplate(x, y);
+
+                if (st !== null && st instanceof Game.EnemyTemplate) {
+                    if (st.LastVisibleTick !== this.Tick - 1) {
+                        if (st.Sprite === null || !this.Sprites.Contains(st.Sprite)) {
+                            st.Spawn(this, x, y, dir);
+                        }
+                    }
+                    st.LastVisibleTick = this.Tick;
+                }
+
+            }
+        }
+
+        for (i = 0; i < this.Sprites.Objects.length; ++i) {
+            this.Sprites.Objects[i].Update(delta);
+        }
+
+        for (i = 0; i < this.MovingSpritesToCheck.length; ++i){
+            this.MovingSpritesToCheck[i].CollideCheck();//optmize
+        }
+        //check fireball
+        for (i = 0; i < this.FireballsToCheck.length; i++) {
+            for (j = 0; j < this.MovingSpritesToCheck.length; j++) {
+                if (this.MovingSpritesToCheck[j] instanceof Game.Enemy && !this.FireballsToCheck[i].Dead) {
+                    if (this.MovingSpritesToCheck[j].HitCheck(this.FireballsToCheck[i])) {
+                        this.FireballsToCheck[i].Die();
+                    }
+                }
+            }
+        }
+
+    }
 
     this.Camera.X = (this.Character.XOld + (this.Character.X - this.Character.XOld) * delta) - 160;
     this.Camera.Y = (this.Character.YOld + (this.Character.Y - this.Character.YOld) * delta) - 120;
-
-    for (i = 0; i < this.Sprites.Objects.length; ++i) {
-            this.Sprites.Objects[i].Update(delta);
-    }
-
-    for (i = 0; i < this.MovingSpritesToCheck.length; ++i){
-        this.MovingSpritesToCheck[i].CollideCheck();//optmize
-    }
 
 };
 
@@ -138,14 +200,14 @@ Game.GameState.prototype.Draw = function(context){
 
     context.save();
     context.translate(-this.Camera.X, -this.Camera.Y);
-    this.Sprites.Draw(context, this.Camera,0);
+    this.Sprites.DrawLayer(context, this.Camera, 0);
     context.restore();
 
     this.Layer.Draw(context, this.Camera);
 
     context.save();
     context.translate(-this.Camera.X, -this.Camera.Y);
-    this.Sprites.Draw(context, this.Camera,1);
+    this.Sprites.DrawLayer(context, this.Camera, 1);
     context.restore();
 };
 
