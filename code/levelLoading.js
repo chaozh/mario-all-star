@@ -15,12 +15,13 @@ Game.LevelLoading.prototype = {
 	LoadingData: function(){
 		var xhr = new XMLHttpRequest();
 		var dataUri = "level" + this.Difficulty + ".json";
+		var that = this;
 
-		xhr.open("GET", dataUri, true);
-		xhr.onload = function(data){
-			this.Data = JSON.parse(data.responseText);
+		xhr.open("GET", dataUri, false);
+		xhr.onload = function(){
+			that.Data = JSON.parse(xhr.responseText);
 		};
-		xhr.send();
+		xhr.send(null);
 	},
 
 	CreateLevel: function(type, difficulty) {
